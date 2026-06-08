@@ -1,7 +1,7 @@
 # 古文単語四択テスト作成アプリ
 
 ## 🌐 アプリケーションはこちら
-[https://kotan315-test.vercel.app/](https://kotan315-test.vercel.app/)
+[https://kotan315-test.vercel.app](https://kotan315-test.vercel.app/)
 
 ## 💡 開発の背景
 このプロジェクトは、私が通っている塾での学習体験がきっかけで開発しました。
