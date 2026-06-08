@@ -543,7 +543,7 @@ function HomeScreen({ rangeStart, setRangeStart, rangeEnd, setRangeEnd, question
   );
 }
 
-const NUMS = ["①", "②", "③", "④"];
+
 
 function PreviewScreen({ questions, title, onBack, onRegenerate, onPrint }) {
   const [tab, setTab] = useState("問題");
