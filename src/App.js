@@ -494,12 +494,12 @@ const inp = { width: "100%", padding: "10px 14px", background: "rgba(255,255,255
 function Label({ children }) { return <div style={{ fontSize: "11px", letterSpacing: "2px", color: "#e2b96f", marginBottom: "7px", fontFamily: "sans-serif" }}>{children}</div>; }
 const nb = { padding: "7px 11px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: "8px", color: "#bbb", cursor: "pointer", fontSize: "12px", fontFamily: "inherit", whiteSpace: "nowrap" };
 
-function HomeScreen({ rangeStart, setRangeStart, rangeEnd, setRangeEnd, questionCount, setQuestionCount, testType, setTestType, testTitle, setTestTitle, onGenerate }) {
+function HomeScreen({ rangeStart, setRangeStart, rangeEnd, setRangeEnd, questionCount, setQuestionCount, testType, setTestType, testTitle, setTestTitle, onGenerate, onQuiz, onQuizMisses }) {
   const maxId = Math.max(...VOCAB.map(v => v.id));
   const count = VOCAB.filter(v => v.id >= rangeStart && v.id <= rangeEnd).length;
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "'Hiragino Mincho ProN','Yu Mincho',serif" }}>
-      <div style={{ background: "rgba(255,255,255,0.05)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "24px", padding: "40px", width: "100%", maxWidth: "520px", boxShadow: "0 25px 50px rgba(0,0,0,0.5)" }}>
+      <div style={{ background: "rgba(255,255,255,0.05)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "24px", padding: "clamp(20px, 6vw, 40px)", width: "100%", maxWidth: "520px", boxShadow: "0 25px 50px rgba(0,0,0,0.5)" }}>
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
           <div style={{ fontSize: "11px", letterSpacing: "4px", color: "#e2b96f", marginBottom: "8px", fontFamily: "sans-serif" }}>KIRIHARA · 古文単語315</div>
           <h1 style={{ fontSize: "24px", fontWeight: "bold", color: "#fff", margin: 0, letterSpacing: "2px" }}>テスト作成ツール</h1>
@@ -520,10 +520,10 @@ function HomeScreen({ rangeStart, setRangeStart, rangeEnd, setRangeEnd, question
         </div>
         <Label>問題数</Label>
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "18px" }}>
-          {[10, 15, 20, 25, 30].map(n => (
+          {[10, 20, 30, 50, 100, 200].map(n => (
             <button key={n} onClick={() => setQuestionCount(n)} style={{ padding: "8px 13px", borderRadius: "20px", border: "1px solid", borderColor: questionCount === n ? "#e2b96f" : "rgba(255,255,255,0.18)", background: questionCount === n ? "rgba(226,185,111,0.18)" : "transparent", color: questionCount === n ? "#e2b96f" : "#aaa", cursor: "pointer", fontSize: "13px" }}>{n}問</button>
           ))}
-          <input type="number" min={1} max={50} value={questionCount} onChange={e => setQuestionCount(Number(e.target.value))} style={{ ...inp, marginBottom: 0, width: "64px", textAlign: "center", padding: "8px" }} />
+          <input type="number" min={1} max={maxId} value={questionCount} onChange={e => setQuestionCount(Number(e.target.value))} style={{ ...inp, marginBottom: 0, width: "64px", textAlign: "center", padding: "8px" }} />
         </div>
         <Label>問題形式</Label>
         <div style={{ display: "flex", gap: "8px", marginBottom: "32px" }}>
@@ -533,8 +533,16 @@ function HomeScreen({ rangeStart, setRangeStart, rangeEnd, setRangeEnd, question
             </button>
           ))}
         </div>
-        <button onClick={onGenerate} style={{ width: "100%", padding: "16px", background: "linear-gradient(135deg,#e2b96f,#f5d78e)", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: "bold", color: "#1a1a2e", cursor: "pointer", letterSpacing: "2px", fontFamily: "inherit" }}>
-          テストを作成する
+        <button onClick={onQuiz} style={{ width: "100%", padding: "16px", background: "linear-gradient(135deg,#e2b96f,#f5d78e)", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: "bold", color: "#1a1a2e", cursor: "pointer", letterSpacing: "2px", fontFamily: "inherit", marginBottom: "10px" }}>
+          スマホで解く（1問ずつ）
+        </button>
+        {loadMisses().length > 0 && (
+          <button onClick={onQuizMisses} style={{ width: "100%", padding: "13px", background: "rgba(214,69,69,0.15)", border: "1px solid rgba(214,69,69,0.5)", borderRadius: "14px", fontSize: "14px", color: "#ffb0b0", cursor: "pointer", fontFamily: "inherit", marginBottom: "10px" }}>
+            前回までに間違えた語を解く（{loadMisses().length}語）
+          </button>
+        )}
+        <button onClick={onGenerate} style={{ width: "100%", padding: "13px", background: "transparent", border: "1px solid rgba(226,185,111,0.5)", borderRadius: "14px", fontSize: "14px", color: "#e2b96f", cursor: "pointer", letterSpacing: "1px", fontFamily: "inherit" }}>
+          印刷用テストを作成する
         </button>
         <div style={{ textAlign: "center", marginTop: "14px", color: "#555", fontSize: "11px" }}>全{maxId}語収録（慣用句の章含む）· 四択 · 印刷対応</div>
       </div>
@@ -609,6 +617,107 @@ function AnswerPreview({ questions, title }) {
   );
 }
 
+
+const MISS_KEY = "kotan315-misses";
+function loadMisses() { try { return JSON.parse(localStorage.getItem(MISS_KEY) || "[]"); } catch { return []; } }
+function saveMisses(ids) { try { localStorage.setItem(MISS_KEY, JSON.stringify(ids)); } catch { /* 保存できない環境では何もしない */ } }
+
+// スマホで1問ずつ解くモード。VOCAB と generateTest をそのまま使う
+function QuizScreen({ questions, onBack, onRetry }) {
+  const [idx, setIdx] = useState(0);
+  const [picked, setPicked] = useState(null);
+  const [results, setResults] = useState([]);
+  const done = idx >= questions.length;
+  const q = questions[idx];
+
+  const pick = (j) => {
+    if (picked !== null) return;
+    setPicked(j);
+    const ok = j === q.correctIndex;
+    setResults(r => [...r, { id: q.id, ok }]);
+    const m = new Set(loadMisses());
+    if (ok) m.delete(q.id); else m.add(q.id);
+    saveMisses([...m]);
+  };
+  const next = () => { setPicked(null); setIdx(i => i + 1); };
+
+  const wrap = { minHeight: "100vh", background: "linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)", color: "#fff", fontFamily: "'Hiragino Mincho ProN','Yu Mincho',serif", padding: "16px", boxSizing: "border-box" };
+  const card = { maxWidth: "520px", margin: "0 auto" };
+
+  if (done) {
+    const correct = results.filter(r => r.ok).length;
+    const wrongIds = results.filter(r => !r.ok).map(r => r.id);
+    const wrongWords = VOCAB.filter(v => wrongIds.includes(v.id));
+    return (
+      <div style={wrap}><div style={card}>
+        <div style={{ textAlign: "center", marginTop: "24px" }}>
+          <div style={{ fontSize: "12px", letterSpacing: "3px", color: "#e2b96f", fontFamily: "sans-serif" }}>RESULT</div>
+          <div style={{ fontSize: "40px", fontWeight: "bold", margin: "8px 0" }}>{correct} / {results.length}</div>
+          <div style={{ color: "#aaa", fontSize: "14px" }}>正答率 {results.length ? Math.round(correct / results.length * 100) : 0}%</div>
+        </div>
+        {wrongWords.length > 0 && (
+          <div style={{ marginTop: "22px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "14px", padding: "14px" }}>
+            <div style={{ fontSize: "12px", color: "#e2b96f", marginBottom: "8px", fontFamily: "sans-serif" }}>間違えた語（{wrongWords.length}）</div>
+            {wrongWords.map(v => (
+              <div key={v.id} style={{ padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: "15px" }}>
+                <span style={{ color: "#888", fontSize: "12px", marginRight: "8px" }}>No.{v.id}</span><b>{v.word}</b>
+                <div style={{ color: "#ccc", fontSize: "13px", marginTop: "2px" }}>{v.meaning}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "22px" }}>
+          {wrongIds.length > 0 && <button onClick={() => onRetry(wrongIds)} style={bigBtn(true)}>間違えた{wrongIds.length}語だけもう一度</button>}
+          <button onClick={onBack} style={bigBtn(false)}>ホームに戻る</button>
+        </div>
+      </div></div>
+    );
+  }
+
+  return (
+    <div style={wrap}><div style={card}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+        <button onClick={onBack} style={nb}>← やめる</button>
+        <div style={{ color: "#aaa", fontSize: "13px", fontFamily: "sans-serif" }}>{idx + 1} / {questions.length}　○ {results.filter(r => r.ok).length}</div>
+      </div>
+      <div style={{ height: "4px", background: "rgba(255,255,255,0.1)", borderRadius: "2px", marginBottom: "22px" }}>
+        <div style={{ height: "100%", width: `${idx / questions.length * 100}%`, background: "#e2b96f", borderRadius: "2px" }} />
+      </div>
+      <div style={{ textAlign: "center", margin: "18px 0 26px" }}>
+        <div style={{ fontSize: "12px", color: "#888", fontFamily: "sans-serif", marginBottom: "8px" }}>
+          No.{q.id}　{q.type === "古→現" ? "意味は？" : "古文では？"}
+        </div>
+        <div style={{ fontSize: q.type === "古→現" ? "34px" : "20px", fontWeight: "bold", lineHeight: 1.4 }}>{q.question}</div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {q.choices.map((c, j) => {
+          let bg = "rgba(255,255,255,0.06)", bd = "rgba(255,255,255,0.15)";
+          if (picked !== null && j === q.correctIndex) { bg = "rgba(80,180,120,0.25)"; bd = "#5cb87a"; }
+          else if (picked === j) { bg = "rgba(214,69,69,0.25)"; bd = "#d64545"; }
+          return (
+            <button key={j} onClick={() => pick(j)} style={{ textAlign: "left", padding: "14px 16px", minHeight: "54px", background: bg, border: `1px solid ${bd}`, borderRadius: "12px", color: "#fff", fontSize: "16px", fontFamily: "inherit", cursor: picked === null ? "pointer" : "default" }}>
+              <span style={{ color: "#e2b96f", marginRight: "10px" }}>{j + 1}</span>{c}
+            </button>
+          );
+        })}
+      </div>
+      {picked !== null && (
+        <div style={{ marginTop: "18px" }}>
+          <div style={{ textAlign: "center", fontSize: "18px", fontWeight: "bold", color: picked === q.correctIndex ? "#5cb87a" : "#ff7070", marginBottom: "8px" }}>
+            {picked === q.correctIndex ? "○ 正解" : "× 不正解"}
+          </div>
+          <div style={{ textAlign: "center", color: "#ccc", fontSize: "14px", marginBottom: "14px" }}>{q.word}：{VOCAB.find(v => v.id === q.id)?.meaning}</div>
+          <button onClick={next} style={bigBtn(true)}>{idx + 1 < questions.length ? "次へ" : "結果を見る"}</button>
+        </div>
+      )}
+    </div></div>
+  );
+}
+function bigBtn(primary) {
+  return { width: "100%", padding: "16px", border: primary ? "none" : "1px solid rgba(255,255,255,0.2)", borderRadius: "14px", fontSize: "16px", fontWeight: "bold", cursor: "pointer", fontFamily: "inherit",
+    background: primary ? "linear-gradient(135deg,#e2b96f,#f5d78e)" : "transparent", color: primary ? "#1a1a2e" : "#ddd" };
+}
+
 export default function App() {
   const [screen, setScreen] = useState("home");
   const [rangeStart, setRangeStart] = useState(1);
@@ -628,8 +737,32 @@ export default function App() {
 
   const handlePrint = () => printTest(questions, testTitle);
 
+  const [quizQs, setQuizQs] = useState([]);
+  const [quizKey, setQuizKey] = useState(0);
+  const startQuiz = (ids) => {
+    // ids 指定あり＝間違えた語だけ。なしなら範囲から問題数ぶん（「全部」は範囲の全語）
+    const inRange = VOCAB.filter(v => v.id >= rangeStart && v.id <= rangeEnd);
+    const pool = ids ? VOCAB.filter(v => ids.includes(v.id)) : inRange;
+    if (pool.length < 1) { alert("出題できる単語がありません"); return; }
+    const n = ids ? pool.length : Math.min(questionCount, pool.length);
+    const type = testType === "両方" ? null : testType;
+    const qs = shuffle(pool).slice(0, n).map((v, i) => {
+      const t = type || (Math.random() < 0.5 ? "古→現" : "現→古");
+      const wrongs = shuffle(VOCAB.filter(c => c.id !== v.id)).slice(0, 3);
+      const all = shuffle([v, ...wrongs]);
+      const ci = all.findIndex(c => c.id === v.id);
+      return { num: i + 1, id: v.id, word: v.word, type: t, question: t === "古→現" ? v.word : v.meaning,
+        choices: all.map(c => t === "古→現" ? c.meaning : c.word), correctIndex: ci };
+    });
+    setQuizQs(qs); setQuizKey(k => k + 1); setScreen("quiz");
+  };
+
+  if (screen === "quiz") {
+    return <QuizScreen key={quizKey} questions={quizQs} onBack={() => setScreen("home")} onRetry={(ids) => startQuiz(ids)} />;
+  }
+
   if (screen === "preview") {
     return <PreviewScreen questions={questions} title={testTitle} onBack={() => setScreen("home")} onRegenerate={generate} onPrint={handlePrint} />;
   }
-  return <HomeScreen rangeStart={rangeStart} setRangeStart={setRangeStart} rangeEnd={rangeEnd} setRangeEnd={setRangeEnd} questionCount={questionCount} setQuestionCount={setQuestionCount} testType={testType} setTestType={setTestType} testTitle={testTitle} setTestTitle={setTestTitle} onGenerate={generate} />;
+  return <HomeScreen rangeStart={rangeStart} setRangeStart={setRangeStart} rangeEnd={rangeEnd} setRangeEnd={setRangeEnd} questionCount={questionCount} setQuestionCount={setQuestionCount} testType={testType} setTestType={setTestType} testTitle={testTitle} setTestTitle={setTestTitle} onGenerate={generate} onQuiz={() => startQuiz()} onQuizMisses={() => startQuiz(loadMisses())} />;
 }
