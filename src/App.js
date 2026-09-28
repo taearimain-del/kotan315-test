@@ -535,13 +535,13 @@ function HomeScreen({ rangeStart, setRangeStart, rangeEnd, setRangeEnd, question
         </div>
         {(() => { const st = studyStats(loadJSON(PROG_KEY)); return (
           <div style={{ background: "rgba(226,185,111,0.08)", border: "1px solid rgba(226,185,111,0.3)", borderRadius: "14px", padding: "14px", marginBottom: "12px", fontFamily: "sans-serif", fontSize: "13px", color: "#ddd", lineHeight: 1.8 }}>
-            <div style={{ color: "#e2b96f", fontWeight: "bold", marginBottom: "2px" }}>記述モード（忘却曲線）</div>
+            <div style={{ color: "#e2b96f", fontWeight: "bold", marginBottom: "2px" }}>暗記カード（忘却曲線）</div>
             習得済み <b>{st.mastered}</b> / {st.total}語　今日の復習 <b>{st.due}</b>語<br />
-            <span style={{ color: "#999", fontSize: "12px" }}>意味を書いて自己採点。初見で書けた語は二度と出ない。書けなかった語は1・3・7・14日後に再出題。新しい語は上の範囲から「問題数」ぶん</span>
+            <span style={{ color: "#999", fontSize: "12px" }}>カードを裏返して、わかった（右）／ダメだった（左）で仕分け。初見でわかった語は二度と出ない。ダメだった語は1・3・7・14日後に再出題。新しい語は上の範囲から「問題数」ぶん</span>
           </div>
         ); })()}
         <button onClick={onStudy} style={{ width: "100%", padding: "16px", background: "linear-gradient(135deg,#e2b96f,#f5d78e)", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: "bold", color: "#1a1a2e", cursor: "pointer", letterSpacing: "2px", fontFamily: "inherit", marginBottom: "10px" }}>
-          今日の学習を始める（書く）
+          今日の学習を始める
         </button>
         <button onClick={onGenerate} style={{ width: "100%", padding: "13px", background: "transparent", border: "1px solid rgba(226,185,111,0.5)", borderRadius: "14px", fontSize: "14px", color: "#e2b96f", cursor: "pointer", letterSpacing: "1px", fontFamily: "inherit" }}>
           印刷用テスト（四択）を作成する
@@ -620,9 +620,9 @@ function AnswerPreview({ questions, title }) {
 }
 
 
-// ===== 記述モード（忘却曲線） =====
-// 初めて見て書けた語は「習得済み」にして二度と出さない。
-// 間違えた語だけを 1→3→7→14日後 に出し直し、14日後も書ければ習得済みにする。
+// ===== 暗記カード（忘却曲線） =====
+// 初めて見てわかった語は「習得済み」にして二度と出さない。
+// ダメだった語だけを 1→3→7→14日後 に出し直し、14日後もわかれば習得済みにする。
 const PROG_KEY = "kotan315-progress-v1";
 const MEMO_KEY = "kotan315-memo-v1";
 const INTERVALS = [1, 3, 7, 14];
@@ -651,8 +651,9 @@ function buildSession(prog, rangeStart, rangeEnd, newCount) {
 function StudyScreen({ initialQueue, onBack }) {
   const [queue, setQueue] = useState(initialQueue);
   const [pos, setPos] = useState(0);
-  const [typed, setTyped] = useState("");
   const [shown, setShown] = useState(false);
+  const [dx, setDx] = useState(0);
+  const [startX, setStartX] = useState(null);
   const [log, setLog] = useState([]);
   const [memos, setMemos] = useState(loadJSON(MEMO_KEY));
   const done = pos >= queue.length;
@@ -663,7 +664,7 @@ function StudyScreen({ initialQueue, onBack }) {
     const prog = loadJSON(PROG_KEY);
     const p = prog[item.id] || { stage: 0, lapses: 0 };
     if (item.kind === "retry") {
-      // 同じ日の解き直しは記録を動かさない。書けなければもう一度後ろに回す
+      // 同じ日の解き直しは記録を動かさない。ダメならもう一度後ろに回す
       if (!ok) setQueue(q => [...q, { id: item.id, kind: "retry" }]);
     } else if (ok) {
       if (item.kind === "new") prog[item.id] = { ...p, mastered: true };
@@ -676,7 +677,7 @@ function StudyScreen({ initialQueue, onBack }) {
       setQueue(q => [...q, { id: item.id, kind: "retry" }]);
     }
     if (item.kind !== "retry") { saveJSON(PROG_KEY, prog); setLog(l => [...l, { id: item.id, ok, kind: item.kind }]); }
-    setTyped(""); setShown(false); setPos(x => x + 1);
+    setShown(false); setDx(0); setStartX(null); setPos(x => x + 1);
   };
   const setMemo = (text) => { const m = { ...memos, [item.id]: text }; setMemos(m); saveJSON(MEMO_KEY, m); };
 
@@ -710,28 +711,33 @@ function StudyScreen({ initialQueue, onBack }) {
       <div style={{ height: "4px", background: "rgba(255,255,255,0.1)", borderRadius: "2px", marginBottom: "22px" }}>
         <div style={{ height: "100%", width: `${pos / queue.length * 100}%`, background: "#e2b96f", borderRadius: "2px" }} />
       </div>
-      <div style={{ textAlign: "center", margin: "12px 0 20px" }}>
-        <div style={{ fontSize: "12px", color: "#888", fontFamily: "sans-serif", marginBottom: "6px" }}>No.{v.id}　意味を書く</div>
+      <div
+        onClick={() => { if (!shown) setShown(true); }}
+        onTouchStart={e => setStartX(e.touches[0].clientX)}
+        onTouchMove={e => { if (startX !== null && shown) setDx(e.touches[0].clientX - startX); }}
+        onTouchEnd={() => { if (shown && Math.abs(dx) > 80) grade(dx > 0); else setDx(0); setStartX(null); }}
+        style={{ minHeight: "260px", borderRadius: "18px", padding: "22px 18px", boxSizing: "border-box", cursor: shown ? "grab" : "pointer", userSelect: "none",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center",
+          background: shown ? (dx > 40 ? "rgba(80,180,120,0.22)" : dx < -40 ? "rgba(214,69,69,0.22)" : "rgba(226,185,111,0.1)") : "rgba(255,255,255,0.06)",
+          border: `1px solid ${shown ? "rgba(226,185,111,0.4)" : "rgba(255,255,255,0.15)"}`,
+          transform: `translateX(${dx}px) rotate(${dx / 25}deg)`, transition: startX === null ? "transform .2s" : "none" }}>
+        <div style={{ fontSize: "12px", color: "#888", fontFamily: "sans-serif", marginBottom: "6px" }}>No.{v.id}</div>
         <div style={{ fontSize: "36px", fontWeight: "bold" }}>{v.word}</div>
         {v.reading !== v.word && <div style={{ color: "#aaa", fontSize: "14px", marginTop: "4px" }}>{v.reading}</div>}
+        {shown
+          ? <div style={{ fontSize: "19px", lineHeight: 1.6, marginTop: "18px", color: "#f5d78e" }}>{v.meaning}</div>
+          : <div style={{ fontSize: "13px", color: "#777", marginTop: "22px", fontFamily: "sans-serif" }}>意味を思い浮かべてからタップで裏返す</div>}
       </div>
-      <textarea value={typed} onChange={e => setTyped(e.target.value)} disabled={shown} rows={2} placeholder="意味を書く（思い出せなければ空欄のまま答えを見る）"
-        style={{ ...inp, fontSize: "16px", minHeight: "64px", resize: "vertical" }} />
-      {!shown ? (
-        <button onClick={() => setShown(true)} style={bigBtn(true)}>答えを見る</button>
-      ) : (
-        <div>
-          <div style={{ background: "rgba(226,185,111,0.1)", border: "1px solid rgba(226,185,111,0.35)", borderRadius: "12px", padding: "14px", marginBottom: "12px" }}>
-            <div style={{ fontSize: "12px", color: "#e2b96f", fontFamily: "sans-serif", marginBottom: "4px" }}>答え</div>
-            <div style={{ fontSize: "17px", lineHeight: 1.6 }}>{v.meaning}</div>
+      {shown && (
+        <div style={{ marginTop: "14px" }}>
+          <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
+            <button onClick={() => grade(false)} style={{ ...bigBtn(false), borderColor: "#d64545", color: "#ff9a9a" }}>← ダメだった</button>
+            <button onClick={() => grade(true)} style={bigBtn(true)}>わかった →</button>
           </div>
+          <div style={{ fontSize: "12px", color: "#777", fontFamily: "sans-serif", textAlign: "center", marginBottom: "10px" }}>カードを右にスワイプ＝わかった／左＝ダメだった</div>
           <div style={{ fontSize: "12px", color: "#888", fontFamily: "sans-serif", margin: "4px 0" }}>自分のメモ（関連語・派生語など。この端末に保存）</div>
           <textarea value={memos[v.id] || ""} onChange={e => setMemo(e.target.value)} rows={2} placeholder="例：本の関連語を自分で書き写しておく"
             style={{ ...inp, fontSize: "14px", minHeight: "48px", resize: "vertical" }} />
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button onClick={() => grade(false)} style={{ ...bigBtn(false), borderColor: "#d64545", color: "#ff9a9a" }}>× 書けなかった</button>
-            <button onClick={() => grade(true)} style={bigBtn(true)}>○ 書けた</button>
-          </div>
         </div>
       )}
     </div></div>
