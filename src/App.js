@@ -426,7 +426,7 @@ function printTest(questions, title) {
 <meta charset="UTF-8">
 <title>${title}</title>
 <style>
-  body { font-family: 'Hiragino Mincho ProN','Yu Mincho',serif; font-size: 10pt; color: #000; margin: 0; }
+  body { font-family: 'Noto Sans JP','Hiragino Sans','Yu Gothic',Meiryo,sans-serif; font-size: 10pt; color: #000; margin: 0; }
   @page { size: A4; margin: 15mm 18mm; }
   .page { width: 100%; page-break-after: always; }
   .page:last-child { page-break-after: auto; }
@@ -498,7 +498,7 @@ function HomeScreen({ rangeStart, setRangeStart, rangeEnd, setRangeEnd, question
   const maxId = Math.max(...VOCAB.map(v => v.id));
   const count = VOCAB.filter(v => v.id >= rangeStart && v.id <= rangeEnd).length;
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "'Hiragino Mincho ProN','Yu Mincho',serif" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "'Noto Sans JP','Hiragino Sans','Yu Gothic',Meiryo,sans-serif" }}>
       <div style={{ background: "rgba(255,255,255,0.05)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "24px", padding: "clamp(20px, 6vw, 40px)", width: "100%", maxWidth: "520px", boxShadow: "0 25px 50px rgba(0,0,0,0.5)" }}>
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
           <div style={{ fontSize: "11px", letterSpacing: "4px", color: "#e2b96f", marginBottom: "8px", fontFamily: "sans-serif" }}>KIRIHARA · 古文単語315</div>
@@ -558,7 +558,7 @@ function HomeScreen({ rangeStart, setRangeStart, rangeEnd, setRangeEnd, question
 function PreviewScreen({ questions, title, onBack, onRegenerate, onPrint }) {
   const [tab, setTab] = useState("問題");
   return (
-    <div style={{ minHeight: "100vh", background: "#0d0d1a", fontFamily: "'Hiragino Mincho ProN','Yu Mincho',serif" }}>
+    <div style={{ minHeight: "100vh", background: "#0d0d1a", fontFamily: "'Noto Sans JP','Hiragino Sans','Yu Gothic',Meiryo,sans-serif" }}>
       <div style={{ background: "rgba(15,15,35,0.98)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(226,185,111,0.25)", padding: "10px 16px", display: "flex", alignItems: "center", gap: "10px", position: "sticky", top: 0, zIndex: 10 }}>
         <button onClick={onBack} style={nb}>← 戻る</button>
         <div style={{ flex: 1, color: "#e2b96f", fontWeight: "bold", fontSize: "13px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
@@ -681,7 +681,7 @@ function StudyScreen({ initialQueue, onBack }) {
   };
   const setMemo = (text) => { const m = { ...memos, [item.id]: text }; setMemos(m); saveJSON(MEMO_KEY, m); };
 
-  const wrap = { minHeight: "100vh", background: "linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)", color: "#fff", fontFamily: "'Hiragino Mincho ProN','Yu Mincho',serif", padding: "16px", boxSizing: "border-box" };
+  const wrap = { minHeight: "100vh", background: "linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)", color: "#fff", fontFamily: "'Noto Sans JP','Hiragino Sans','Yu Gothic',Meiryo,sans-serif", padding: "16px", boxSizing: "border-box" };
   const card = { maxWidth: "520px", margin: "0 auto" };
 
   if (done) {
